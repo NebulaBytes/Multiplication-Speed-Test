@@ -8,17 +8,17 @@
     /* Configurable CSS Variables */
     :root {
       --font-face: 'Arial, sans-serif';
-      --font-size: 28px; /* Updated font size */
-      --question-font-size: 32px; /* Updated question font size */
-      --primary-color: #00796B; /* Teal (Primary Color) */
-      --secondary-color: #0288D1; /* Blue (Secondary Color) */
-      --accent-color: #00ACC1; /* Lighter Teal (Accent Color) */
-      --background-color: #E0F7FA; /* Light Teal Background */
+      --font-size: 28px;
+      --question-font-size: 32px;
+      --primary-color: #00796B; /* Teal */
+      --secondary-color: #0288D1; /* Blue */
+      --accent-color: #00ACC1; /* Light Teal */
+      --background-color: #E0F7FA; /* Light Teal */
       --card-background: white;
-      --card-border: #B2DFDB; /* Soft Teal for card border */
-      --box-shadow: rgba(0, 150, 136, 0.2); /* Slight Teal shadow */
-      --bar-color: #00796B; /* Teal for bars */
-      --bar-gradient-end: #0288D1; /* Gradient from Teal to Blue */
+      --card-border: #B2DFDB; /* Soft Teal */
+      --box-shadow: rgba(0, 150, 136, 0.2); /* Teal shadow */
+      --bar-color: #00796B;
+      --bar-gradient-end: #0288D1;
     }
 
     body {
@@ -134,8 +134,16 @@
 
     .question-row {
       font-size: var(--question-font-size);
+      transition: all 0.3s ease;
     }
 
+    .enlarged-row {
+      font-size: calc(var(--question-font-size) * 2);
+      font-weight: bold;
+      background-color: var(--accent-color);
+      color: white;
+    }
+    
     .stats-card {
       background-color: var(--card-background);
       border: 1px solid var(--card-border);
@@ -210,7 +218,6 @@
     <tbody></tbody>
   </table>
 
-  <!-- Stats Card -->
   <div class="stats-card" id="statsCard">
     <h3>Test Results</h3>
     <p id="fastestTime"></p>
@@ -218,20 +225,19 @@
     <p id="averageTime"></p>
   </div>
 
-  <!-- Splash Screen with Emoji -->
   <div class="splash-screen" id="splashScreen">
-    👏🎉👌🌟🔥
+    🎉
   </div>
 
-  <script>
+<script>
     let multiplier = 2; // Default multiplier
     let numQuestions = 10; // Default number of questions
     let startTimes = [];
     let results = [];
     let randomNumbers = [];
     let questionText = []; // To store the corresponding questions
+    let currentRow; // Store the current question row
 
-    // Generate the visual array for the multiplier (1 to 12) and question numbers (5, 10, 15, 20)
     window.onload = function() {
       const multiplierBoxes = document.getElementById('multiplierBoxes');
       const questionBoxes = document.getElementById('questionBoxes');
@@ -297,7 +303,7 @@
 
         // Create table row for the question
         const row = document.createElement('tr');
-        row.className = 'question-row';
+        row.className = 'question-row'; // Default class for row
         const questionCell = document.createElement('td');
         questionCell.textContent = `${multiplier} x ${randomNum}`;
 
@@ -316,6 +322,13 @@
         row.appendChild(barCell);
 
         document.querySelector('#testTable tbody').appendChild(row);
+
+        // Enlarge the current row and accent the colors
+        if (currentRow) {
+          currentRow.classList.remove('enlarged-row'); // Reset previous row
+        }
+        currentRow = row;
+        row.classList.add('enlarged-row'); // Enlarge current row
 
         // Create input to capture the answer, but place it in the answer column now
         const answerInput = document.createElement('input');
@@ -341,6 +354,7 @@
               if (currentQuestionIndex < numQuestions) {
                 askNextQuestion(); // Move to the next question
               } else {
+                resetFinalRowStyles(); // Reset the final row
                 setTimeout(showSplashScreen, 500); // Show splash screen after the test
               }
             } else {
@@ -355,6 +369,12 @@
       }
     }
 
+    function resetFinalRowStyles() {
+      if (currentRow) {
+        currentRow.classList.remove('enlarged-row'); // Reset styles of the last row
+      }
+    }
+
     function showSplashScreen() {
       const splashScreen = document.getElementById('splashScreen');
       splashScreen.style.display = 'flex'; // Show splash screen
@@ -362,7 +382,7 @@
       setTimeout(() => {
         splashScreen.style.display = 'none'; // Hide splash screen after 3 seconds
         displayBarsAndStats(); // Show bars and stats after the splash screen
-      }, 1500);
+      }, 3000);
     }
 
     function displayBarsAndStats() {
@@ -396,6 +416,7 @@
       // Show the stats card
       document.getElementById('statsCard').style.display = 'block';
     }
-  </script>
+</script>
+
 </body>
 </html>
