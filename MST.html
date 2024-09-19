@@ -10,13 +10,13 @@
       --font-face: 'Arial, sans-serif';
       --font-size: 28px;
       --question-font-size: 32px;
-      --primary-color: #00796B; /* Teal */
-      --secondary-color: #0288D1; /* Blue */
-      --accent-color: #00ACC1; /* Light Teal */
-      --background-color: #E0F7FA; /* Light Teal */
+      --primary-color: #00796B;
+      --secondary-color: #0288D1;
+      --accent-color: #00ACC1;
+      --background-color: #E0F7FA;
       --card-background: white;
-      --card-border: #B2DFDB; /* Soft Teal */
-      --box-shadow: rgba(0, 150, 136, 0.2); /* Teal shadow */
+      --card-border: #B2DFDB;
+      --box-shadow: rgba(0, 150, 136, 0.2);
       --bar-color: #00796B;
       --bar-gradient-end: #0288D1;
     }
@@ -37,7 +37,7 @@
 
     .control-panel {
       display: flex;
-      justify-content: center;
+      justify-content: space-around;
       flex-wrap: wrap;
       margin-bottom: 20px;
     }
@@ -49,23 +49,24 @@
       border-radius: 10px;
       padding: 20px;
       margin: 10px;
-      width: 250px;
+      width: 100%;
+      max-width: 600px;
     }
 
     .selection-boxes {
-      display: flex;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr); /* 6 boxes per row */
+      grid-gap: 10px;
     }
 
     .box {
       display: flex;
       justify-content: center;
       align-items: center;
-      width: 50px;
-      height: 50px;
+      width: 60px;
+      height: 60px;
       margin: 5px;
-      font-size: var(--font-size);
+      font-size: calc(var(--font-size) * 1.2); /* Slightly larger text */
       font-weight: bold;
       color: white;
       background-color: var(--primary-color);
@@ -120,16 +121,18 @@
     }
 
     .answer-input {
-      padding: 5px;
-      font-size: var(--font-size);
-      width: 60px;
-      border: 1px solid #ccc;
-      border-radius: 3px;
+      padding: 10px;
+      font-size: 36px; /* Larger font size */
+      width: 80px;
+      border: 2px solid var(--primary-color); /* Matching border style */
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+      color: var(--primary-color);
     }
 
     .answer-input:focus {
       outline: none;
-      border-color: var(--primary-color);
+      border-color: var(--accent-color);
     }
 
     .question-row {
@@ -143,7 +146,7 @@
       background-color: var(--accent-color);
       color: white;
     }
-    
+
     .stats-card {
       background-color: var(--card-background);
       border: 1px solid var(--card-border);
@@ -152,7 +155,7 @@
       padding: 20px;
       margin: 20px auto;
       width: 400px;
-      display: none; /* Hidden by default */
+      display: none;
     }
 
     .stats-card h3 {
@@ -179,7 +182,39 @@
       z-index: 1000;
       font-size: 100px;
       color: white;
-      display: none; /* Hidden by default */
+      display: none;
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+      .control-panel {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .control-card {
+        width: 100%;
+        max-width: 400px;
+      }
+
+      .selection-boxes {
+        grid-template-columns: repeat(3, 1fr); /* Stack multiplier boxes on smaller screens */
+      }
+
+      .box {
+        width: 50px;
+        height: 50px;
+      }
+
+      .start-btn {
+        width: 80%;
+        font-size: 20px;
+      }
+
+      .answer-input {
+        width: 60px;
+        font-size: 28px;
+      }
     }
   </style>
 </head>
@@ -194,6 +229,10 @@
       </div>
     </div>
 
+    <div style="text-align: center;">
+      <button class="start-btn" onclick="startTest()">Start Test</button>
+    </div>
+
     <div class="control-card">
       <label for="numQuestions">Select Number of Questions:</label>
       <div id="questionBoxes" class="selection-boxes">
@@ -202,15 +241,12 @@
     </div>
   </div>
 
-  <div style="text-align: center;">
-    <button class="start-btn" onclick="startTest()">Start Test</button>
-  </div>
-
   <table id="testTable">
     <thead>
       <tr>
         <th>Question</th>
         <th>Answer</th>
+        <th>Result</th> <!-- New Result Column -->
         <th>Time (sec)</th>
         <th>Visualization</th>
       </tr>
@@ -226,23 +262,24 @@
   </div>
 
   <div class="splash-screen" id="splashScreen">
-    🎉 🔥 🌟 👏
+    🎉
   </div>
 
-<script>
+  <script>
     let multiplier = 2; // Default multiplier
     let numQuestions = 10; // Default number of questions
     let startTimes = [];
     let results = [];
     let randomNumbers = [];
-    let questionText = []; // To store the corresponding questions
-    let currentRow; // Store the current question row
+    let questionText = [];
+    let currentRow;
+    let timerInterval; // Timer interval for the running timer
 
     window.onload = function() {
       const multiplierBoxes = document.getElementById('multiplierBoxes');
       const questionBoxes = document.getElementById('questionBoxes');
 
-      // Create multiplier selection boxes
+      // Create multiplier selection boxes (6x2 layout)
       for (let i = 1; i <= 12; i++) {
         const box = document.createElement('div');
         box.textContent = i;
@@ -303,21 +340,21 @@
 
         // Create table row for the question
         const row = document.createElement('tr');
-        row.className = 'question-row'; // Default class for row
+        row.className = 'question-row';
         const questionCell = document.createElement('td');
         questionCell.textContent = `${multiplier} x ${randomNum}`;
 
         const answerCell = document.createElement('td');
+        const resultCell = document.createElement('td'); // New Result cell
         const timeCell = document.createElement('td');
-        timeCell.textContent = 'Waiting...';
-
         const barCell = document.createElement('td');
         const bar = document.createElement('div');
         bar.className = 'bar';
         barCell.appendChild(bar);
-
+        
         row.appendChild(questionCell);
-        row.appendChild(answerCell); // New column for the answer
+        row.appendChild(answerCell);
+        row.appendChild(resultCell); // Append Result cell
         row.appendChild(timeCell);
         row.appendChild(barCell);
 
@@ -328,39 +365,53 @@
           currentRow.classList.remove('enlarged-row'); // Reset previous row
         }
         currentRow = row;
-        row.classList.add('enlarged-row'); // Enlarge current row
+        row.classList.add('enlarged-row');
 
-        // Create input to capture the answer, but place it in the answer column now
+        // Create input to capture the answer (type text to remove arrows)
         const answerInput = document.createElement('input');
         answerInput.className = 'answer-input';
-        answerInput.type = 'number';
-        answerCell.appendChild(answerInput); // Now the input is in the answer cell
+        answerInput.type = 'text'; // Use text type to remove arrows
+        answerCell.appendChild(answerInput);
+
+        // Show a running timer in the time cell
+        let elapsedSeconds = 0;
+        timeCell.textContent = `0.0 sec`;
+        timerInterval = setInterval(() => {
+          elapsedSeconds += 0.1;
+          timeCell.textContent = `${elapsedSeconds.toFixed(1)} sec`;
+        }, 100);
 
         answerInput.addEventListener('keyup', function (event) {
           if (event.key === 'Enter') {
-            const stopTime = new Date().getTime();
-            const elapsedTime = (stopTime - startTimes[currentQuestionIndex]) / 1000; // In seconds
-
             const userAnswer = parseInt(answerInput.value);
+            if (isNaN(userAnswer)) return; // Invalid input, ignore
+
+            const stopTime = new Date().getTime();
+            const elapsedTime = (stopTime - startTimes[currentQuestionIndex]) / 1000;
+
             const correctAnswer = multiplier * randomNum;
 
             if (userAnswer === correctAnswer) {
               timeCell.textContent = `${elapsedTime.toFixed(2)} sec`;
               timeCell.style.color = 'green';
+              resultCell.innerHTML = `✅`; // Show tick mark on correct answer
               results[currentQuestionIndex] = elapsedTime;
-              answerCell.innerHTML = `${userAnswer} ✅`; // Display the correct answer with tick mark
               currentQuestionIndex++;
 
+              clearInterval(timerInterval);
+
+              answerInput.setAttribute('readonly', true); // Make the previous answer readonly
+
               if (currentQuestionIndex < numQuestions) {
-                askNextQuestion(); // Move to the next question
+                askNextQuestion();
               } else {
-                resetFinalRowStyles(); // Reset the final row
-                setTimeout(showSplashScreen, 500); // Show splash screen after the test
+                resetFinalRowStyles();
+                setTimeout(showSplashScreen, 500);
               }
             } else {
-              timeCell.textContent = 'Incorrect. Try again.';
-              timeCell.style.color = 'red';
+              resultCell.innerHTML = `<span style="color: red;">❌ Try Again</span>`;
               answerInput.value = ''; // Clear the incorrect answer
+              // Timer continues to run
             }
           }
         });
@@ -371,18 +422,18 @@
 
     function resetFinalRowStyles() {
       if (currentRow) {
-        currentRow.classList.remove('enlarged-row'); // Reset styles of the last row
+        currentRow.classList.remove('enlarged-row');
       }
     }
 
     function showSplashScreen() {
       const splashScreen = document.getElementById('splashScreen');
-      splashScreen.style.display = 'flex'; // Show splash screen
+      splashScreen.style.display = 'flex';
 
       setTimeout(() => {
-        splashScreen.style.display = 'none'; // Hide splash screen after 3 seconds
-        displayBarsAndStats(); // Show bars and stats after the splash screen
-      }, 1000);
+        splashScreen.style.display = 'none';
+        displayBarsAndStats();
+      }, 3000);
     }
 
     function displayBarsAndStats() {
@@ -397,8 +448,6 @@
       document.querySelectorAll('.bar').forEach((bar, index) => {
         const time = results[index];
         const barWidth = (time / maxTime) * 100;
-        
-        // Calculate gradient color from green (min) to orange (max)
         const colorRatio = (time - minTime) / (maxTime - minTime);
         const red = Math.round(255 * colorRatio);
         const green = Math.round(255 * (1 - colorRatio));
@@ -416,7 +465,6 @@
       // Show the stats card
       document.getElementById('statsCard').style.display = 'block';
     }
-</script>
-
+  </script>
 </body>
 </html>
