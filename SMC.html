@@ -9,7 +9,7 @@
     :root {
       --font-face: 'Arial, sans-serif';
       --font-size: 28px;
-      --question-font-size: 32px;
+      --question-font-size: 36px;
       --primary-color: #00796B;
       --secondary-color: #0288D1;
       --accent-color: #00ACC1;
@@ -18,7 +18,9 @@
       --card-border: #B2DFDB;
       --box-shadow: rgba(0, 150, 136, 0.2);
       --go-button-color: #4CAF50;
+      --stop-button-color: #FF9800;
       --reset-button-color: #9E9E9E;
+      --mute-button-color: #FF5252;
     }
 
     body {
@@ -94,9 +96,26 @@
       text-align: center;
       width: 300px;
       margin: 20px auto;
+      position: relative;
     }
 
-    .go-btn, .reset-btn {
+    .mute-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: var(--mute-button-color);
+      border: none;
+      border-radius: 50%;
+      padding: 15px;
+      cursor: pointer;
+      font-size: 24px;
+      color: white;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transition: background-color 0.3s;
+      z-index: 1000;
+    }
+
+    .go-btn, .stop-btn, .reset-btn {
       padding: 15px 30px;
       font-size: var(--font-size);
       color: white;
@@ -110,8 +129,8 @@
       background-color: var(--go-button-color);
     }
 
-    .go-btn:hover {
-      background-color: var(--accent-color);
+    .stop-btn {
+      background-color: var(--stop-button-color);
     }
 
     .reset-btn {
@@ -134,11 +153,30 @@
       margin-top: 10px;
     }
 
-    .current-row {
+    .current-question-card {
       background-color: var(--accent-color);
       color: white;
       font-weight: bold;
-      transition: background-color 0.3s ease;
+      font-size: var(--question-font-size);
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+      text-align: center;
+      box-shadow: 0 4px 8px var(--box-shadow);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .answer-input {
+      padding: 10px;
+      font-size: 36px;
+      width: 100px;
+      border: 2px solid var(--primary-color);
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      color: var(--primary-color);
+      margin-top: 15px;
     }
 
     table {
@@ -146,6 +184,7 @@
       border-collapse: collapse;
       margin-top: 20px;
       background-color: white;
+      display: none; /* Hide table initially */
     }
 
     th, td {
@@ -157,21 +196,6 @@
     th {
       background-color: var(--primary-color);
       color: white;
-    }
-
-    .answer-input {
-      padding: 10px;
-      font-size: 36px;
-      width: 80px;
-      border: 2px solid var(--primary-color);
-      border-radius: 5px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      color: var(--primary-color);
-    }
-
-    .answer-input:focus {
-      outline: none;
-      border-color: var(--accent-color);
     }
   </style>
 </head>
@@ -192,9 +216,14 @@
 
   <div class="buttons-tile">
     <div class="timer-display" id="overallTimer">READY!</div>
-    <button class="go-btn" onclick="startTest()">GO</button>
+    <button class="go-btn" id="goButton" onclick="toggleTest()">GO</button>
     <button class="reset-btn" onclick="resetTest()">Reset</button>
     <div class="progress-display" id="progressDisplay">0/10 completed</div>
+  </div>
+
+  <div id="currentQuestionCard" class="current-question-card" style="display: none;">
+    <span id="currentQuestionText"></span>
+    <input id="answerInput" class="answer-input" type="text" placeholder="Answer here">
   </div>
 
   <table id="testTable">
@@ -209,6 +238,14 @@
     <tbody></tbody>
   </table>
 
+  <!-- Audio elements for sound effects -->
+  <audio id="dingSound" src="ding.mp3" preload="auto"></audio>
+  <audio id="buzzSound" src="buzz.mp3" preload="auto"></audio>
+  <audio id="celebrationSound" src="celebration.mp3" preload="auto"></audio>
+
+  <!-- Mute Button -->
+  <button class="mute-btn" id="muteButton" onclick="toggleMute()">🔇</button>
+
   <script>
     let selectedMultipliers = [3, 4, 5, 6];
     let numQuestions = 10;
@@ -217,17 +254,16 @@
     let randomNumbers = [];
     let questionText = [];
     let currentQuestionIndex;
-    let currentRow;
     let questionTimerInterval;
     let overallTimerInterval;
     let overallStartTime;
     let overallTime = 0;
+    let isMuted = false; // Default mute state
 
     window.onload = function() {
       const multiplierBoxes = document.getElementById('multiplierBoxes');
       const questionBoxes = document.getElementById('questionBoxes');
 
-      // Create multiplier selection boxes
       for (let i = 1; i <= 12; i++) {
         const box = document.createElement('div');
         box.textContent = i;
@@ -247,7 +283,6 @@
         multiplierBoxes.appendChild(box);
       }
 
-      // Create question selection boxes
       [10, 20, 50].forEach(num => {
         const box = document.createElement('div');
         box.textContent = num;
@@ -265,8 +300,33 @@
       });
     };
 
+    function toggleMute() {
+      isMuted = !isMuted;
+      const muteButton = document.getElementById('muteButton');
+      muteButton.textContent = isMuted ? '🔈' : '🔇';
+    }
+
+    function playSound(soundId) {
+      if (!isMuted) {
+        const sound = document.getElementById(soundId);
+        sound.currentTime = 0; // Reset the sound to the beginning
+        sound.play();
+      }
+    }
+
+    function toggleTest() {
+      const goButton = document.getElementById('goButton');
+      if (goButton.textContent === 'GO') {
+        goButton.textContent = 'STOP';
+        goButton.classList.remove('go-btn');
+        goButton.classList.add('stop-btn');
+        startTest();
+      } else {
+        stopTest();
+      }
+    }
+
     function startTest() {
-      // Reset variables
       startTimes = [];
       results = [];
       randomNumbers = [];
@@ -275,11 +335,11 @@
       overallTime = 0;
       clearInterval(overallTimerInterval);
 
-      document.querySelector('#testTable tbody').innerHTML = ''; // Clear previous test data
+      document.querySelector('#testTable tbody').innerHTML = '';
       document.getElementById('overallTimer').textContent = '0.0 sec';
       document.getElementById('progressDisplay').textContent = `0/${numQuestions} completed`;
+      document.getElementById('testTable').style.display = 'none';
 
-      // Generate random questions
       for (let i = 0; i < numQuestions; i++) {
         const randomMultiplier = selectedMultipliers[Math.floor(Math.random() * selectedMultipliers.length)];
         const randomNum = Math.floor(Math.random() * 12) + 1;
@@ -287,11 +347,16 @@
         questionText.push(`${randomMultiplier} x ${randomNum}`);
       }
 
-      // Start the overall timer
       overallStartTime = new Date().getTime();
       overallTimerInterval = setInterval(updateOverallTimer, 100);
 
-      askNextQuestion(); // Start asking questions
+      askNextQuestion();
+    }
+
+    function stopTest() {
+      clearInterval(overallTimerInterval);
+      document.getElementById('testTable').style.display = 'table';
+      resetButton();
     }
 
     function updateOverallTimer() {
@@ -307,75 +372,56 @@
         const startTime = new Date().getTime();
         startTimes[currentQuestionIndex] = startTime;
 
-        // Create row
-        const row = document.createElement('tr');
-        row.classList.add('current-row'); // Highlight current row
-        const questionCell = document.createElement('td');
-        questionCell.textContent = question;
+        const currentQuestionCard = document.getElementById('currentQuestionCard');
+        document.getElementById('currentQuestionText').textContent = question;
+        currentQuestionCard.style.display = 'flex';
 
-        const answerCell = document.createElement('td');
-        const resultCell = document.createElement('td');
-        const timeCell = document.createElement('td');
-        
-        row.appendChild(questionCell);
-        row.appendChild(answerCell);
-        row.appendChild(resultCell);
-        row.appendChild(timeCell);
+        const answerInput = document.getElementById('answerInput');
+        answerInput.value = '';
+        answerInput.focus();
 
-        const tbody = document.querySelector('#testTable tbody');
-        tbody.insertBefore(row, tbody.firstChild);
-
-        // Reset previous row's highlight
-        if (currentRow) currentRow.classList.remove('current-row');
-        currentRow = row;
-
-        // Answer input
-        const answerInput = document.createElement('input');
-        answerInput.className = 'answer-input';
-        answerInput.type = 'text';
-        answerCell.appendChild(answerInput);
-
-        // Timer for this question
         let questionElapsed = 0;
-        timeCell.textContent = '0.0 sec';
         questionTimerInterval = setInterval(() => {
           questionElapsed += 0.1;
-          timeCell.textContent = `${questionElapsed.toFixed(1)} sec`;
         }, 100);
 
-        answerInput.addEventListener('keyup', function (event) {
-          if (event.key === 'Enter') {
-            const userAnswer = parseInt(answerInput.value);
-            const correctAnswer = multiplier * randomNum;
+        answerInput.addEventListener('input', function () {
+          const userAnswer = parseInt(answerInput.value);
+          const correctAnswer = multiplier * randomNum;
 
-            if (userAnswer === correctAnswer) {
-              const stopTime = new Date().getTime();
-              const elapsedTime = (stopTime - startTimes[currentQuestionIndex]) / 1000;
+          if (userAnswer === correctAnswer) {
+            playSound('dingSound'); // Play ding sound on correct answer
+            const stopTime = new Date().getTime();
+            const elapsedTime = (stopTime - startTimes[currentQuestionIndex]) / 1000;
 
-              clearInterval(questionTimerInterval);
-              timeCell.textContent = `${elapsedTime.toFixed(2)} sec`;
-              resultCell.innerHTML = '✅';
-              results[currentQuestionIndex] = elapsedTime;
+            clearInterval(questionTimerInterval);
 
-              answerInput.setAttribute('readonly', true);
-              currentQuestionIndex++;
+            const tbody = document.querySelector('#testTable tbody');
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${question}</td><td>${userAnswer}</td><td>✅</td><td>${elapsedTime.toFixed(2)} sec</td>`;
+            tbody.insertBefore(row, tbody.firstChild);
 
-              // Update progress display
-              document.getElementById('progressDisplay').textContent = `${currentQuestionIndex}/${numQuestions} completed`;
+            currentQuestionCard.style.display = 'none';
+            currentQuestionIndex++;
 
-              if (currentQuestionIndex < numQuestions) {
-                askNextQuestion();
-              } else {
-                clearInterval(overallTimerInterval); // Stop the overall timer
-              }
+            document.getElementById('progressDisplay').textContent = `${currentQuestionIndex}/${numQuestions} completed`;
+
+            if (currentQuestionIndex < numQuestions) {
+              askNextQuestion();
             } else {
-              resultCell.innerHTML = '<span style="color: red;">❌ Try Again</span>';
-              answerInput.value = '';
+              clearInterval(overallTimerInterval);
+              document.getElementById('testTable').style.display = 'table';
+              playSound('celebrationSound'); // Play celebration sound on test completion
+              resetButton();
             }
           }
         });
 
-        answerInput.focus();
+        answerInput.addEventListener('keyup', function (event) {
+          if (event.key === 'Enter' && parseInt(answerInput.value) !== correctAnswer) {
+            playSound('buzzSound'); // Play buzz sound on incorrect answer
+          }
+        });
       }
     }
 
@@ -385,9 +431,11 @@
       document.getElementById('overallTimer').textContent = 'READY!';
       document.getElementById('progressDisplay').textContent = `0/${numQuestions} completed`;
       document.querySelector('#testTable tbody').innerHTML = '';
+      document.getElementById('testTable').style.display = 'none';
       clearInterval(overallTimerInterval);
+      document.getElementById('currentQuestionCard').style.display = 'none';
+      resetButton();
 
-      // Reset UI
       document.querySelectorAll('#multiplierBoxes .box').forEach((box, index) => {
         if ([3, 4, 5, 6].includes(index + 1)) {
           box.classList.add('selected');
@@ -402,6 +450,13 @@
           box.classList.add('selected');
         }
       });
+    }
+
+    function resetButton() {
+      const goButton = document.getElementById('goButton');
+      goButton.textContent = 'GO';
+      goButton.classList.remove('stop-btn');
+      goButton.classList.add('go-btn');
     }
   </script>
 </body>
