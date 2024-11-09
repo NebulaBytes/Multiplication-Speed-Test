@@ -389,7 +389,7 @@
           const userAnswer = parseInt(answerInput.value);
           const correctAnswer = multiplier * randomNum;
 
-          if (userAnswer === correctAnswer) {
+          if (answerInput.value.length === correctAnswer.toString().length && userAnswer === correctAnswer) {
             playSound('dingSound'); // Play ding sound on correct answer
             const stopTime = new Date().getTime();
             const elapsedTime = (stopTime - startTimes[currentQuestionIndex]) / 1000;
