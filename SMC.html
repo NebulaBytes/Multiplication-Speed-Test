@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speed Multiplication Challenge</title>
+  <style>
+    /* Configurable CSS Variables */
+    :root {
+      --font-face: 'Arial, sans-serif';
+      --font-size: 28px;
+      --question-font-size: 32px;
+      --primary-color: #00796B;
+      --secondary-color: #0288D1;
+      --accent-color: #00ACC1;
+      --background-color: #E0F7FA;
+      --card-background: white;
+      --card-border: #B2DFDB;
+      --box-shadow: rgba(0, 150, 136, 0.2);
+      --go-button-color: #4CAF50;
+      --reset-button-color: #9E9E9E;
+    }
+
+    body {
+      font-family: var(--font-face);
+      font-size: var(--font-size);
+      background-color: var(--background-color);
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--primary-color);
+    }
+
+    .control-panel {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .control-card {
+      background-color: var(--card-background);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 4px 8px var(--box-shadow);
+      border-radius: 10px;
+      padding: 20px;
+      margin: 10px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .selection-boxes {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-gap: 10px;
+    }
+
+    .box {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 60px;
+      height: 60px;
+      margin: 5px;
+      font-size: calc(var(--font-size) * 1.2);
+      font-weight: bold;
+      color: white;
+      background-color: var(--primary-color);
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .box.selected {
+      background-color: var(--accent-color);
+    }
+
+    .buttons-tile {
+      background-color: var(--card-background);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 4px 8px var(--box-shadow);
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      flex-direction: column;
+      text-align: center;
+      width: 300px;
+      margin: 20px auto;
+    }
+
+    .go-btn, .reset-btn {
+      padding: 15px 30px;
+      font-size: var(--font-size);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .go-btn {
+      background-color: var(--go-button-color);
+    }
+
+    .go-btn:hover {
+      background-color: var(--accent-color);
+    }
+
+    .reset-btn {
+      background-color: var(--reset-button-color);
+    }
+
+    .reset-btn:hover {
+      background-color: #757575;
+    }
+
+    .timer-display {
+      font-size: calc(var(--font-size) * 1.5);
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+
+    .progress-display {
+      font-size: var(--font-size);
+      color: var(--secondary-color);
+      margin-top: 10px;
+    }
+
+    .current-row {
+      background-color: var(--accent-color);
+      color: white;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: white;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .answer-input {
+      padding: 10px;
+      font-size: 36px;
+      width: 80px;
+      border: 2px solid var(--primary-color);
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      color: var(--primary-color);
+    }
+
+    .answer-input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+  </style>
+</head>
+<body>
+  <h1>Speed Multiplication Challenge</h1>
+
+  <div class="control-panel">
+    <div class="control-card">
+      <label for="multiplier">Select Multipliers:</label>
+      <div id="multiplierBoxes" class="selection-boxes"></div>
+    </div>
+
+    <div class="control-card">
+      <label for="numQuestions">Select Challenge:</label>
+      <div id="questionBoxes" class="selection-boxes"></div>
+    </div>
+  </div>
+
+  <div class="buttons-tile">
+    <div class="timer-display" id="overallTimer">READY!</div>
+    <button class="go-btn" onclick="startTest()">GO</button>
+    <button class="reset-btn" onclick="resetTest()">Reset</button>
+    <div class="progress-display" id="progressDisplay">0/10 completed</div>
+  </div>
+
+  <table id="testTable">
+    <thead>
+      <tr>
+        <th>Question</th>
+        <th>Answer</th>
+        <th>Result</th>
+        <th>Time (sec)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    let selectedMultipliers = [3, 4, 5, 6];
+    let numQuestions = 10;
+    let startTimes = [];
+    let results = [];
+    let randomNumbers = [];
+    let questionText = [];
+    let currentQuestionIndex;
+    let currentRow;
+    let questionTimerInterval;
+    let overallTimerInterval;
+    let overallStartTime;
+    let overallTime = 0;
+
+    window.onload = function() {
+      const multiplierBoxes = document.getElementById('multiplierBoxes');
+      const questionBoxes = document.getElementById('questionBoxes');
+
+      // Create multiplier selection boxes
+      for (let i = 1; i <= 12; i++) {
+        const box = document.createElement('div');
+        box.textContent = i;
+        box.classList.add('box');
+        if (selectedMultipliers.includes(i)) box.classList.add('selected');
+
+        box.addEventListener('click', function () {
+          if (selectedMultipliers.includes(i)) {
+            selectedMultipliers = selectedMultipliers.filter(num => num !== i);
+            box.classList.remove('selected');
+          } else {
+            selectedMultipliers.push(i);
+            box.classList.add('selected');
+          }
+        });
+
+        multiplierBoxes.appendChild(box);
+      }
+
+      // Create question selection boxes
+      [10, 20, 50].forEach(num => {
+        const box = document.createElement('div');
+        box.textContent = num;
+        box.classList.add('box');
+        if (num === numQuestions) box.classList.add('selected');
+
+        box.addEventListener('click', function () {
+          document.querySelectorAll('#questionBoxes .box').forEach(box => box.classList.remove('selected'));
+          this.classList.add('selected');
+          numQuestions = num;
+          document.getElementById('progressDisplay').textContent = `0/${numQuestions} completed`;
+        });
+
+        questionBoxes.appendChild(box);
+      });
+    };
+
+    function startTest() {
+      // Reset variables
+      startTimes = [];
+      results = [];
+      randomNumbers = [];
+      questionText = [];
+      currentQuestionIndex = 0;
+      overallTime = 0;
+      clearInterval(overallTimerInterval);
+
+      document.querySelector('#testTable tbody').innerHTML = ''; // Clear previous test data
+      document.getElementById('overallTimer').textContent = '0.0 sec';
+      document.getElementById('progressDisplay').textContent = `0/${numQuestions} completed`;
+
+      // Generate random questions
+      for (let i = 0; i < numQuestions; i++) {
+        const randomMultiplier = selectedMultipliers[Math.floor(Math.random() * selectedMultipliers.length)];
+        const randomNum = Math.floor(Math.random() * 12) + 1;
+        randomNumbers.push(randomNum);
+        questionText.push(`${randomMultiplier} x ${randomNum}`);
+      }
+
+      // Start the overall timer
+      overallStartTime = new Date().getTime();
+      overallTimerInterval = setInterval(updateOverallTimer, 100);
+
+      askNextQuestion(); // Start asking questions
+    }
+
+    function updateOverallTimer() {
+      overallTime = (new Date().getTime() - overallStartTime) / 1000;
+      document.getElementById('overallTimer').textContent = `${overallTime.toFixed(1)} sec`;
+    }
+
+    function askNextQuestion() {
+      if (currentQuestionIndex < numQuestions) {
+        const question = questionText[currentQuestionIndex];
+        const multiplier = parseInt(question.split(' x ')[0]);
+        const randomNum = randomNumbers[currentQuestionIndex];
+        const startTime = new Date().getTime();
+        startTimes[currentQuestionIndex] = startTime;
+
+        // Create row
+        const row = document.createElement('tr');
+        row.classList.add('current-row'); // Highlight current row
+        const questionCell = document.createElement('td');
+        questionCell.textContent = question;
+
+        const answerCell = document.createElement('td');
+        const resultCell = document.createElement('td');
+        const timeCell = document.createElement('td');
+        
+        row.appendChild(questionCell);
+        row.appendChild(answerCell);
+        row.appendChild(resultCell);
+        row.appendChild(timeCell);
+
+        const tbody = document.querySelector('#testTable tbody');
+        tbody.insertBefore(row, tbody.firstChild);
+
+        // Reset previous row's highlight
+        if (currentRow) currentRow.classList.remove('current-row');
+        currentRow = row;
+
+        // Answer input
+        const answerInput = document.createElement('input');
+        answerInput.className = 'answer-input';
+        answerInput.type = 'text';
+        answerCell.appendChild(answerInput);
+
+        // Timer for this question
+        let questionElapsed = 0;
+        timeCell.textContent = '0.0 sec';
+        questionTimerInterval = setInterval(() => {
+          questionElapsed += 0.1;
+          timeCell.textContent = `${questionElapsed.toFixed(1)} sec`;
+        }, 100);
+
+        answerInput.addEventListener('keyup', function (event) {
+          if (event.key === 'Enter') {
+            const userAnswer = parseInt(answerInput.value);
+            const correctAnswer = multiplier * randomNum;
+
+            if (userAnswer === correctAnswer) {
+              const stopTime = new Date().getTime();
+              const elapsedTime = (stopTime - startTimes[currentQuestionIndex]) / 1000;
+
+              clearInterval(questionTimerInterval);
+              timeCell.textContent = `${elapsedTime.toFixed(2)} sec`;
+              resultCell.innerHTML = '✅';
+              results[currentQuestionIndex] = elapsedTime;
+
+              answerInput.setAttribute('readonly', true);
+              currentQuestionIndex++;
+
+              // Update progress display
+              document.getElementById('progressDisplay').textContent = `${currentQuestionIndex}/${numQuestions} completed`;
+
+              if (currentQuestionIndex < numQuestions) {
+                askNextQuestion();
+              } else {
+                clearInterval(overallTimerInterval); // Stop the overall timer
+              }
+            } else {
+              resultCell.innerHTML = '<span style="color: red;">❌ Try Again</span>';
+              answerInput.value = '';
+            }
+          }
+        });
+
+        answerInput.focus();
+      }
+    }
+
+    function resetTest() {
+      selectedMultipliers = [3, 4, 5, 6];
+      numQuestions = 10;
+      document.getElementById('overallTimer').textContent = 'READY!';
+      document.getElementById('progressDisplay').textContent = `0/${numQuestions} completed`;
+      document.querySelector('#testTable tbody').innerHTML = '';
+      clearInterval(overallTimerInterval);
+
+      // Reset UI
+      document.querySelectorAll('#multiplierBoxes .box').forEach((box, index) => {
+        if ([3, 4, 5, 6].includes(index + 1)) {
+          box.classList.add('selected');
+        } else {
+          box.classList.remove('selected');
+        }
+      });
+
+      document.querySelectorAll('#questionBoxes .box').forEach(box => {
+        box.classList.remove('selected');
+        if (parseInt(box.textContent) === 10) {
+          box.classList.add('selected');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
